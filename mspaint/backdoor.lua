@@ -10,8 +10,6 @@ local maingame = mainui.Initiator.Main_Game
 local camera = workspace.CurrentCamera
 local remote_folder = ReplicatedStorage.RemotesFolder
 
-local clfunction = clonefunction or function(f) return f end
-
 local repo = 'https://raw.githubusercontent.com/mstudio45/LinoriaLib/main/'
 
 local Library = loadstring(game:HttpGet(repo .. 'Library.lua'))()
@@ -27,11 +25,10 @@ local Window = Library:CreateWindow({
 })
 
 local ESPTable = {
-    Levers = {},
-    Doors = {},
-    Key = {},
+    Objectives = {},
     Wardrobe = {},
-    Entity = {}
+    Entity = {},
+    Doors = {}
 }
 
 local connections = {}
@@ -280,165 +277,6 @@ function format_timer(seconds)
 	return tostring(math.floor(minutes)) .. ":" .. tostring(seconds)
 end
 
-function handle_esp(room,table)
-    local Assets = room:WaitForChild("Assets",3)
-    if not Assets then
-        -- Entity Notify + ESP
-        local entity = room -- so its easier to read
-        if not (entity.Name == "BackdoorLookman" or entity.Name == "BackdoorRush") then return end
-
-        if Toggles.entity_esp.Value then
-            local EntityESP = ESP({
-                Object = entity,
-                Text = entity.Name,
-                Color = Color3.fromRGB(255, 0, 0),
-                entity = true
-            })
-
-            ESPTable.Entity[#ESPTable.Entity+1] = EntityESP
-        end
-
-        if Toggles.notify_entity.Value then
-            notify(notification_msg[entity.Name], entity)
-        end
-
-        return
-    end
-
-    -- we can also iterate over the children and check if they have the attribute "LoadModule"
-    -- if they do then thats something the player can interact with but im too lazy to do that
-
-    if table ~= nil and table.leveresp then
-        task.spawn(function()
-            local TimerLever = Assets:WaitForChild("TimerLever",3)
-
-            if TimerLever then
-                local highlight = TimerLever:FindFirstChildOfClass("Highlight")
-                if highlight and highlight.Name == "_mspaintESP" then
-                    return
-                end
-
-                local TimerESP = ESP({
-                    Object = TimerLever,
-                    Text = "Lever",
-                    Color = Color3.fromRGB(50, 168, 82)
-                })
-
-                ESPTable.Levers[#ESPTable.Levers+1] = TimerESP
-            end
-        end)
-    end
-
-    if Toggles.key_esp.Value and room:GetAttribute("RequiresKey") then
-        task.spawn(function()
-            local Key = Assets:WaitForChild("KeyObtain")
-            
-            if Key then
-                local highlight = Key:FindFirstChildOfClass("Highlight")
-                if highlight and highlight.Name == "_mspaintESP" then
-                    return
-                end
-
-                local KeyESP = ESP({
-                    Object = Key,
-                    Text = "Key",
-                    Color = Color3.fromRGB(50, 168, 82)
-                })
-    
-                ESPTable.Key[#ESPTable.Key+1] = KeyESP
-            end
-        end)
-    end
-
-    if Toggles.door_esp.Value then
-        task.spawn(function()
-            local Door = room:WaitForChild("Door",1)
-
-            if Door then
-                Door:WaitForChild("Door",1)
-
-                local highlight = Door.Door:FindFirstChildOfClass("Highlight")
-                if highlight and highlight.Name == "_mspaintESP" then
-                    return
-                end
-
-                local DoorESP = ESP({
-                    Object = Door.Door,
-                    Text = "Door",
-                    Color = Color3.new(1, 0.941176, 0)
-                })
-
-                ESPTable.Doors[#ESPTable.Doors+1] = DoorESP
-            end
-        end)
-    end
-
-    if Toggles.wardrobe_esp.Value then
-        -- task.spawn cuz if i do return it will stop the whole function
-        task.spawn(function()
-            local Wardrobe = Assets:WaitForChild("Backdoor_Wardrobe",1)
-
-            if not Wardrobe then return end
-            
-            local highlight = Wardrobe:FindFirstChildOfClass("Highlight")
-            if not (highlight and highlight.Name == "_mspaintESP") then
-                local WardrobeESP = ESP({
-                    Object = Wardrobe,
-                    Text = "Wardrobe",
-                    Color = Color3.fromRGB(160,190,255)
-                })
-    
-                ESPTable.Wardrobe[#ESPTable.Wardrobe+1] = WardrobeESP
-            end
-
-            for i,v in pairs(Assets:GetChildren()) do
-                if v.Name == "Backdoor_Wardrobe" then
-                    local hl = v:FindFirstChildOfClass("Highlight")
-                    if hl and hl.Name == "_mspaintESP" then
-                        continue
-                    end
-
-                    local WardrobeESP = ESP({
-                        Object = v,
-                        Text = "Wardrobe",
-                        Color = Color3.fromRGB(160,190,255)
-                    })
-
-                    ESPTable.Wardrobe[#ESPTable.Wardrobe+1] = WardrobeESP
-                end
-            end
-        end)
-    end
-end
-
-function handle_entity_bypasses(room)
-    if room:WaitForChild("ClosetSpace", 2) and Toggles.anti_vacuum.Value then
-        local fake_doors = {}
-        for i,v in pairs(room:GetChildren()) do
-            if v.Name == "ClosetSpace" then
-                fake_doors[#fake_doors+1] = v
-            end
-        end
-
-        for _,door in pairs(fake_doors) do
-            task.spawn(function()
-                door:WaitForChild("Collision")
-                
-                while not Library.Unloaded or door ~= nil or door:IsDescendantOf(workspace) do
-                    door.Collision.CanTouch = not Toggles.anti_vacuum.Value
-                    door.Collision.CanCollide = not Toggles.anti_vacuum.Value
-                    task.wait()
-                end
-
-                if Library.Unloaded and door then
-                    door.Collision.CanTouch = true
-                    door.Collision.CanCollide = true
-                end
-            end)
-        end
-    end
-end
-
 -- people didnt check console so uh yea
 --assert(ReplicatedStorage.GameData.Floor.Value == "Backdoor", "You are not in the backdoor gamemode")
 if not ReplicatedStorage.GameData.Floor.Value == "Backdoor" then
@@ -515,16 +353,10 @@ main_visual_group:AddSlider("fov_slider", {
     Compact = false
 })
 
-esp_group:AddToggle("lever_esp", {
-    Text = "Lever ESP",
+esp_group:AddToggle("objective_esp", {
+    Text = "Objective ESP",
     Default = false,
-    Tooltip = "Shows ESP on levers",
-})
-
-esp_group:AddToggle("key_esp", {
-    Text = "Key ESP",
-    Default = false,
-    Tooltip = "Shows ESP on keys",
+    Tooltip = "Shows ESP on levers & keys",
 })
 
 esp_group:AddToggle("door_esp", {
@@ -611,51 +443,189 @@ Toggles.haste_clock:OnChanged(function(value)
     end    
 end)
 
-Toggles.lever_esp:OnChanged(function(value)
-    if value then
-        connections["lever_esp"] = workspace.CurrentRooms.DescendantAdded:Connect(function(descendant)
-            local is_in_parts = (descendant:FindFirstAncestorOfClass("Folder") ~= nil and descendant:FindFirstAncestorOfClass("Folder").Name == "Parts")
-            if descendant.Name == "Parts" or is_in_parts then return end
+local esp_target_names = {
+    Entity = {"BackdoorLookman", "BackdoorRush"},
+}
 
-            if descendant.Name == "TimerLever" then
-                local highlight = descendant:FindFirstChildOfClass("Highlight")
-                if highlight and highlight.Name == "_mspaintESP" then
-                    return
+function handle_esp(obj, options)
+    local is_toggle_callback = options.is_toggle_callback ~= nil
+    local is_descendant = options.is_descendant_connection ~= nil
+    local is_entity = options.is_entity_connection ~= nil
+    
+    local function add_esp(esp_obj, esp_options)
+        --[[
+            esp_options = {
+                Text = "Lever",
+                Color = Color3.fromRGB(50, 168, 82),
+                Table = "Levers"
+            }
+        ]]
+    
+        local highlight = esp_obj:FindFirstChildOfClass("Highlight")
+        local key_name = esp_options.Table
+    
+        if highlight and highlight.Name == "_mspaintESP" then
+            return
+        end
+    
+        local ESP_Object = ESP({
+            Object = esp_obj,
+            Text = esp_options.Text,
+            Color = esp_options.Color,
+
+            entity = (esp_options.entity or false)
+        })
+        
+        ESPTable[key_name][#ESPTable[key_name]+1] = ESP_Object
+    end
+
+    local function prettify_module_name(name)
+        return name:gsub("Obtain",""):gsub("Timer","")
+    end
+
+    local function apply_room_esp(room)
+        local Assets = room:WaitForChild("Assets",3)
+
+        -- we can also iterate over the children and check if they have the attribute "LoadModule"
+        for i,v in pairs(Assets:GetChildren()) do
+            if v:IsA("Model") and v:GetAttribute("LoadModule") ~= nil and Toggles.objective_esp.Value then
+                local esp_text = prettify_module_name(v:GetAttribute("LoadModule"))
+
+                if esp_text == "Wardrobe" then
+                    continue
                 end
 
-                local ESP = ESP({
-                    Object = descendant,
-                    Text = "Lever",
-                    Color = Color3.fromRGB(255, 0, 0)
+                add_esp(v, {
+                    Text = esp_text,
+                    Color = Color3.fromRGB(50, 168, 82),
+                    
+                    Table = "Objectives"
                 })
-
-                ESPTable.Levers[#ESPTable.Levers+1] = ESP
             end
-        end)
-
-        for i,v in pairs(workspace.CurrentRooms:GetChildren()) do
-            handle_esp(v, {leveresp = true})
         end
 
-    else
-        for _, ESP in pairs(ESPTable.Levers) do
-            ESP.delete()
+        if Toggles.door_esp.Value then
+            local Door = room:WaitForChild("Door",1)
+
+            add_esp(Door.Door, {
+                Text = "Door",
+                Color = Color3.new(1, 0.941176, 0),
+                
+                Table = "Doors"
+            })
         end
 
-        if connections["lever_esp"] then
-            connections["lever_esp"]:Disconnect()
-            connections["lever_esp"] = nil
+        if Toggles.wardrobe_esp.Value then
+            for i,v in pairs(Assets:GetChildren()) do
+                if v.Name == "Backdoor_Wardrobe" then
+                    add_esp(v, {
+                        Text = "Wardrobe",
+                        Color = Color3.fromRGB(160,190,255),
+                        
+                        Table = "Wardrobe"
+                    })
+                end
+            end
+        end
+
+        if Toggles.wardrobe_esp.Value then
+            for i,v in pairs(Assets:GetChildren()) do
+                if v.Name == "Backdoor_Wardrobe" then
+                    add_esp(v, {
+                        Text = "Wardrobe",
+                        Color = Color3.fromRGB(160,190,255),
+                        
+                        Table = "Wardrobe"
+                    })
+                end
+            end
         end
     end
-end)
 
-Toggles.key_esp:OnChanged(function(value)
+    local function apply_descendant_esp(descendant)
+        if Toggles.door_esp.Value and descendant.Name == "Door" and descendant:IsA("Model") then
+            descendant:WaitForChild("Door", math.huge)
+            descendant.Door:WaitForChild("Hit", math.huge)
+
+            add_esp(descendant.Door, {
+                Text = "Door",
+                Color = Color3.new(1, 0.941176, 0),
+                
+                Table = "Doors"
+            })
+
+            return
+        end
+
+        if Toggles.wardrobe_esp.Value and descendant.Name == "Backdoor_Wardrobe" then
+            descendant:WaitForChild("Main", math.huge)
+
+            add_esp(descendant, {
+                Text = "Wardrobe",
+                Color = Color3.fromRGB(160,190,255),
+                
+                Table = "Wardrobe"
+            })
+
+            return
+        end
+
+        local is_a_objective = descendant:GetAttribute("LoadModule") ~= nil
+        if Toggles.objective_esp.Value and is_a_objective then
+            descendant:WaitForChild("Hitbox", math.huge)
+            
+            add_esp(descendant, {
+                Text = prettify_module_name(descendant:GetAttribute("LoadModule")),
+                Color = Color3.fromRGB(50, 168, 82),
+                
+                Table = "Objectives"
+            })
+
+            return
+        end
+    end
+
+    local function apply_entity_esp(entity)
+        if not table.find(esp_target_names.Entity, entity.Name) then return end
+
+        if Toggles.notify_entity.Value then
+            notify(notification_msg[entity.Name], entity)
+        end
+
+        local primary = entity:WaitForChild("Core", 1.5) or entity:WaitForChild("Main", 1.5)
+        if Toggles.entity_esp.Value and primary then
+            add_esp(entity, {
+                Text = entity.Name,
+                Color = Color3.fromRGB(255, 0, 0),
+                
+                Table = "Entity",
+                entity = true
+            })
+        end
+    end
+
+    if is_toggle_callback then
+        apply_room_esp(obj)
+    end
+
+    if is_descendant then
+        apply_descendant_esp(obj)
+    end
+
+    if is_entity then
+        apply_entity_esp(obj)
+    end
+end
+
+Toggles.objective_esp:OnChanged(function(value)
     if value then
         for i,v in pairs(workspace.CurrentRooms:GetChildren()) do
-            handle_esp(v)
+            handle_esp(v, {
+                is_toggle_callback = true
+            })
         end
     else
-        for _, ESP in pairs(ESPTable.Key) do
+        for _, ESP in pairs(ESPTable.Objectives) do
             ESP.delete()
         end
     end
@@ -664,7 +634,9 @@ end)
 Toggles.door_esp:OnChanged(function(value)
     if value then
         for i,v in pairs(workspace.CurrentRooms:GetChildren()) do
-            handle_esp(v)
+            handle_esp(v, {
+                is_toggle_callback = true
+            })
         end
     else
         for _, ESP in pairs(ESPTable.Doors) do
@@ -676,7 +648,9 @@ end)
 Toggles.wardrobe_esp:OnChanged(function(value)
     if value then
         for i,v in pairs(workspace.CurrentRooms:GetChildren()) do
-            handle_esp(v)
+            handle_esp(v, {
+                is_toggle_callback = true
+            })
         end
     else
         for _, ESP in pairs(ESPTable.Wardrobe) do
@@ -688,7 +662,9 @@ end)
 Toggles.entity_esp:OnChanged(function(value)
     if value then
         for i,v in pairs(workspace.CurrentRooms:GetChildren()) do
-            handle_esp(v)
+            handle_esp(v, {
+                is_toggle_callback = true
+            })
         end
     else
         for _, ESP in pairs(ESPTable.Entity) do
@@ -696,8 +672,6 @@ Toggles.entity_esp:OnChanged(function(value)
         end
     end
 end)
-
-
 
 local humanoid = player.Character:FindFirstChildOfClass("Humanoid")
 connections["main"] = RunService.RenderStepped:Connect(function()
@@ -714,17 +688,61 @@ connections["main"] = RunService.RenderStepped:Connect(function()
 
 end)
 
-connections["childadded"] = workspace.ChildAdded:Connect(function(child)
-    handle_esp(child)
+connections["esp_connection"] = workspace.CurrentRooms.DescendantAdded:Connect(function(descendant)
+    local is_in_parts = (descendant:FindFirstAncestorOfClass("Folder") ~= nil and descendant:FindFirstAncestorOfClass("Folder").Name == "Parts")
+    local is_parts = descendant.Name == "Parts"
+    local is_in_assets = descendant.Parent.Name == "Assets" and descendant.Parent:IsA("Folder")
+
+    if (is_parts or is_in_parts) or (not is_in_assets and not descendant.Name == "Door") then return end
+    handle_esp(descendant, {
+        is_descendant_connection = true
+    })
 end)
 
-connections["espchildadded"] = workspace.CurrentRooms.ChildAdded:Connect(function(room)
-    handle_esp(room)
-    handle_entity_bypasses(room)
+connections["entity_connection"] = workspace.ChildAdded:Connect(function(entity)
+    handle_esp(entity, {
+        is_entity_connection = true
+    })
+end)
+
+connections["exploit_childadded"] = workspace.CurrentRooms.ChildAdded:Connect(function(room)
+    
+    -- anti vacuum
+    if room:WaitForChild("ClosetSpace", 2) and Toggles.anti_vacuum.Value then
+        local fake_doors = {}
+        for i,v in pairs(room:GetChildren()) do
+            if v.Name == "ClosetSpace" then
+                fake_doors[#fake_doors+1] = v
+            end
+        end
+
+        local function handle_door(door)
+            door:WaitForChild("Collision")
+                
+            while not Library.Unloaded and door ~= nil and door:IsDescendantOf(workspace) do
+                door.Collision.CanTouch = not Toggles.anti_vacuum.Value
+                door.Collision.CanCollide = not Toggles.anti_vacuum.Value
+                task.wait()
+            end
+
+            if Library.Unloaded and door and door:IsDescendantOf(workspace) then
+                door.Collision.CanTouch = true
+                door.Collision.CanCollide = true
+            end
+        end
+
+        for _,door in pairs(fake_doors) do
+            task.spawn(handle_door, door)
+        end
+    end
+
+
 end)
 
 for i,v in pairs(workspace.CurrentRooms:GetChildren()) do
-    handle_esp(v)
+    handle_esp(v, {
+        is_toggle_callback = true
+    })
 end
 
 Library:OnUnload(function()
@@ -741,6 +759,10 @@ Library:OnUnload(function()
     game.Lighting.Ambient = temp.ambient or Color3.fromRGB(0,0,0)
 
     table.clear(connections)
+
+    if Toggles.anti_jumpscare.Value then
+        haste.Parent = ReplicatedStorage.FloorClientStuff.ClientRemote
+    end
 
     clock_screengui:Destroy()
     Library.Unloaded = true
@@ -779,5 +801,5 @@ ThemeManager:ApplyToTab(config_tab)
 
 SaveManager:LoadAutoloadConfig()
 
-notify("mspaint v1.0.1 loaded successfully!\nMade by upio (www.upio.dev)", 6)
+notify("mspaint v1.0.2 loaded successfully!\nMade by upio (www.upio.dev)", 6)
 print("https://www.upio.dev/nick/nickeh")
