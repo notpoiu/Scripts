@@ -486,6 +486,8 @@ function handle_esp(obj, options)
     local function apply_room_esp(room)
         local Assets = room:WaitForChild("Assets",3)
 
+	if not Assets then return end
+		
         -- we can also iterate over the children and check if they have the attribute "LoadModule"
         for i,v in pairs(Assets:GetChildren()) do
             if v:IsA("Model") and v:GetAttribute("LoadModule") ~= nil and Toggles.objective_esp.Value then
