@@ -1,8 +1,8 @@
 local Scanner = game:GetObjects("rbxassetid://12594482248")[1]
 Scanner.Parent = game.Players.LocalPlayer.Backpack
 
-local target_fps = 30
-local disable_static = false
+local target_fps = _G.scanner_fps or 30
+local disable_static = _G.disable_static or false
 
 -- Variables
 local Storage = Scanner:WaitForChild("Storage")
