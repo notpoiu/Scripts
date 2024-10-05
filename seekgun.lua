@@ -2,28 +2,15 @@
 -- i wont bother to create a raycast for the jeff puddle, im too lazy
 
 local Functions = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Functions.lua"))()
-local CustomShop = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Shop%20Items/Source.lua"))()
-
 local tweenService = game:GetService("TweenService")
 
 local player = game.Players.LocalPlayer
-local mainui = player.PlayerGui.MainUI
 local mouse = player:GetMouse()
 
 local seekGun = game:GetObjects("rbxassetid://13386404155")[1] or LoadCustomInstance("https://raw.githubusercontent.com/persopoiu/scripts/main/SeekGunAssets/SeekPistol.rbxm")
 local seekAmmo = game:GetObjects("rbxassetid://13386436753")[1] or LoadCustomInstance("https://raw.githubusercontent.com/persopoiu/scripts/main/SeekGunAssets/SeekAmmo.rbxm")
 local seekPuddle = game:GetObjects("rbxassetid://13398815770")[1] or LoadCustomInstance("https://raw.githubusercontent.com/persopoiu/scripts/main/SeekGunAssets/SeekPuddle.rbxm")
 seekPuddle.Size = Vector3.new(0.001, 0.001, 0.001)
-
-if mainui.ItemShop and mainui.ItemShop.Visible then
-    CustomShop.CreateItem(seekGun, {
-        Title = _G.ShopName or "Seek Gun",
-        Desc = _G.ShopDescription or "Seekifies Anything that it shoots",
-        Image = "rbxassetid://13390436314",
-        Price = _G.ShopPrice or 300,
-        Stack = 1,
-    })
-end
 
 seekGun.Parent = player.Backpack
 
