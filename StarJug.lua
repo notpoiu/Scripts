@@ -46,6 +46,9 @@ local collisionClone
 StarJug.Activated:Connect(function()
     if debounce then return end
     debounce = true
+    
+    LoadedAnims["open"]:Play()
+    
     if durability - 1 ~= 0 then
         durability = durability - 1
         StarJug:SetAttribute("Durability", durability)
