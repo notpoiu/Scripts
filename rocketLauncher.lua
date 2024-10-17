@@ -1,10 +1,8 @@
 local Functions = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Functions.lua"))()
-local CustomShop = loadstring(game:HttpGet("https://raw.githubusercontent.com/RegularVynixu/Utilities/main/Doors/Custom%20Shop%20Items/Source.lua"))()
 
 local debrisService = game:GetService("Debris")
 
 local player = game.Players.LocalPlayer
-local mainui = player.PlayerGui.MainUI
 local mouse = player:GetMouse()
 
 local rocketLauncher = game:GetObjects("rbxassetid://13602301356")[1]
@@ -29,15 +27,6 @@ local Rocket = Instance.new("Part") do
     bodyForce.Force = Vector3.new(0, Rocket:GetMass() * workspace.Gravity, 0)
 end
 
-if mainui.ItemShop and mainui.ItemShop.Visible then
-    CustomShop.CreateItem(seekGun, {
-        Title = "Rocket Launcher",
-        Desc = "Shoot rockets",
-        Image = "rbxassetid://90021376",
-        Price = 1000,
-        Stack = 1,
-    })
-end
 rocketLauncher.Parent = player.Backpack
 
 rocketLauncher.Activated:Connect(function()
