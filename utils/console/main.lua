@@ -141,6 +141,7 @@ function module.custom_print(...)
     local log_module = {}
 
     function log_module.update_message(...)
+        local update_timestamp = true
         if typeof(select(1, ...)) == "table" then
             local data = select(1, ...)
 
@@ -155,10 +156,15 @@ function module.custom_print(...)
             if typeof(data.color) == "Color3" then
                 color = data.color
             end
+
+            if typeof(data.update_timestamp) == "boolean" then
+                update_timestamp = data.timestamp
+            end
         else
             local msg = select(1, ...)
             local img = select(2, ...)
             local clr = select(3, ...)
+            local update = select(4, ...)
 
             if typeof(msg) == "string" then
                 message = msg
@@ -171,9 +177,15 @@ function module.custom_print(...)
             if typeof(clr) == "Color3" then
                 color = clr
             end
+
+            if typeof(update_timestamp) == "boolean" then
+                update_timestamp = update
+            end
         end
 
-        timestamp = os.date("%H:%M:%S")
+        if update_timestamp then
+            timestamp = os.date("%H:%M:%S")
+        end
     end
 
     function log_module.cleanup()
@@ -183,15 +195,14 @@ function module.custom_print(...)
     return log_module
 end
 
-
 function module.custom_console_progressbar(params)
     if typeof(params) == "string" then
         params = {msg = params}
     end
 
-    local msg = params["msg"]
-    local clr = params["clr"]
-    local img = params["img"]
+    local msg = params["msg"] or params["message"]
+    local clr = params["clr"] or params["color"]
+    local img = params["img"] or params["image"]
 
     local progressbar_length = params["length"] or 10
 
@@ -204,7 +215,12 @@ function module.custom_console_progressbar(params)
     local progressbar_module = {}
 
     function progressbar_module.update_message(_message, _image, _color)
-        message.update_message(_message, _image, _color)
+        message.update_message({
+            message = _message,
+            image = _image,
+            color = _color,
+            update_timestamp = false
+        })
     end
 
     function progressbar_module.update_progress(_progress)
@@ -221,10 +237,10 @@ function module.custom_console_progressbar(params)
             end
         end
 
-        message.update_message(msg .. " [" .. progressbar_string .. "] " .. normalized_progress .. "%", img, clr)
+        message.update_message(msg .. " [" .. progressbar_string .. "] " .. normalized_progress .. "%", img, clr, false)
     end
 
-    function progressbar_module.update_message_with_progress(_message,_progress)
+    function progressbar_module.update_message_with_progress(_message, _progress)
         _progress = _progress or progress
 
         msg = _message
