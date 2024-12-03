@@ -132,6 +132,7 @@ function module.custom_print(...)
 
             msg.Text = timestamp .. " -- " .. message
             msg.TextColor3 = color
+            msg.TextWrapped = true
 
             img.Image = image
             img.ImageColor3 = color
