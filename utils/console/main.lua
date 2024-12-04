@@ -11,6 +11,8 @@ However you may use it anywhere without any credits (but credits are appreciated
 ]]
 
 local global_env = getgenv() or shared or _G or {}
+if global_env["console_utils"] then return global_env.console_utils end
+
 local cloneref = (cloneref or clonereference or function(instance: any) return instance end)
 
 local RunService = cloneref(game:GetService("RunService"))
@@ -255,4 +257,5 @@ function module.custom_console_progressbar(params)
     return progressbar_module
 end
 
+global_env.console_utils = module
 return module
