@@ -110,7 +110,7 @@ function module.custom_print(...)
     local UMID = _internal_get_guid()
     print(UMID)
     
-    local message_index = _internal_get_message_index(UMID)
+    local message_index; task.spawn(function() message_index = _internal_get_message_index(UMID) end)
     
     local ConsoleUI;
     local conn; conn = RunService.RenderStepped:Connect(function()
