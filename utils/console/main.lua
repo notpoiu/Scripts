@@ -9,19 +9,21 @@
     However you may use it anywhere without any credits (but credits are appreciated <3)
 --]]
 
-local global_env = getgenv() or shared or _G or {}
+local global_env = (getgenv and getgenv()) or shared or _G or {}
 if global_env["console_utils"] then return global_env.console_utils end
 
---// module table \\--
-local module = {
-    custom_prints = {},
-    render_stepped_conn = nil,
-}
 
 --// services \\--
 local cloneref = (cloneref or clonereference or function(instance: any) return instance end)
 local RunService = cloneref(game:GetService("RunService"))
 local CoreGui = cloneref(game:GetService("CoreGui"))
+
+--// module table \\--
+local MAX_LINES = 2048 --// taken from corescripts roblox repo
+local module = {
+    custom_prints = {};
+    render_stepped_conn = nil;
+}
 
 --// variables \\--
 local ClientLog = nil;
@@ -63,7 +65,7 @@ function module.custom_print(...)
         image = "",
         color = Color3.fromRGB(255, 255, 255),
         timestamp = os.date("%H:%M:%S"),
-        UMID = -1
+        UMID = _internal_get_guid()
     }
 
     --// fetch data \\--
@@ -99,18 +101,17 @@ function module.custom_print(...)
         end
     end
 
-    -- unique message id
-    local UMID = _internal_get_guid()
-    print(UMID)
-
     --// for main loop \\--
     local logData;
 
+	--// insert into prints table, also cut old prints if over max lines \\--
+	while #module.custom_prints > MAX_LINES do table.remove(module.custom_prints, 1); end
     table.insert(module.custom_prints, custom_print)
-    custom_print.update = function()
+
+    custom_print.update = function(ClientLogChildren)
         if not ClientLog then return end
 
-        if logData and logData.inst and logData.inst:IsDescendantOf(ClientLog) then
+        if logData and (logData.inst and logData.inst.Parent and logData.inst.Parent.Name == ClientLog.Name) then
             if logData.msg then
                 -- Update the message
                 logData.msg.Text = custom_print.timestamp .. " -- " .. custom_print.message
@@ -123,14 +124,16 @@ function module.custom_print(...)
                 logData.img.ImageColor3 = custom_print.color
             end
         else
-            for _, newlog in pairs(ClientLog:GetChildren()) do
-                if not (newlog:FindFirstChild("msg") and newlog:FindFirstChild("image")) then continue end
-                if tostring(newlog.msg.Text):split(" -- ")[2] ~= tostring(UMID) then continue end
+			logData = nil;
+            for _, newlog in pairs(ClientLogChildren) do
+				local msgInst, imgInst = newlog:FindFirstChild("msg"), newlog:FindFirstChild("image")
+                if not (msgInst and imgInst) then continue end
+                if tostring(msgInst.Text):split(" -- ")[2] ~= tostring(custom_print.UMID) then continue end
 
                 logData = {
-                    inst = newlog,
-                    msg = newlog:FindFirstChild("msg"),
-                    img = newlog:FindFirstChild("image")
+                    inst = newlog;
+                    msg = msgInst;
+                    img = imgInst;
                 };
 
                 break
@@ -160,7 +163,7 @@ function module.custom_print(...)
             end
 
             if typeof(data.update_timestamp) == "boolean" then
-                update_timestamp = data.timestamp
+                update_timestamp = data.update_timestamp
             end
         else
             local msg = select(1, ...)
@@ -180,7 +183,7 @@ function module.custom_print(...)
                 custom_print.color = clr
             end
 
-            if typeof(update_timestamp) == "boolean" then
+            if typeof(update) == "boolean" then
                 update_timestamp = update
             end
         end
@@ -192,7 +195,7 @@ function module.custom_print(...)
 
     log_module.cleanup = function()
         for i, print_data in pairs(module.custom_prints) do
-            if print_data.UMID == UMID then
+            if print_data.UMID == custom_print.UMID then
                 table.remove(module.custom_prints, i)
                 break
             end
@@ -201,6 +204,8 @@ function module.custom_print(...)
         custom_print.update = function() end
     end
 
+    -- unique message id
+    print(custom_print.UMID)
     return log_module
 end
 
@@ -269,11 +274,13 @@ module.render_stepped_conn = RunService.RenderStepped:Connect(function()
     -- update client log --
     local vis, log = _internal_get_console()
     if not vis then return end
+	if not log then return end
     ClientLog = log;
 
     -- prints update --
-    for _, print_data in pairs(module.custom_prints) do
-        print_data.update()
+	local clientLogChildren = ClientLog:GetChildren()
+    for _, print_data in next, module.custom_prints do
+        print_data.update(clientLogChildren)
     end
 end)
 
