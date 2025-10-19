@@ -20,7 +20,7 @@ local CoreGui = cloneref(game:GetService("CoreGui"))
 
 --// module table \\--
 local MAX_LINES = 2048 --// taken from corescripts roblox repo
-local module = {
+local library = {
     custom_prints = {};
     render_stepped_conn = nil;
 }
@@ -33,33 +33,30 @@ if not global_env._console_message_counter then
 end
 
 --// functions \\--
+function _find_first_child(root, paths)
+    local instance = root
+
+    for _, path in ipairs(paths) do
+        instance = instance:FindFirstChild(path)
+        if not instance then
+            return false, nil
+        end
+    end
+
+    return true, instance
+end
+
 function _internal_get_guid()
     global_env._console_message_counter = global_env._console_message_counter + 1
     return tostring(global_env._console_message_counter) .. tostring(tick())
 end
 
 function _internal_get_console()
-    local console_master = CoreGui:FindFirstChild("DevConsoleMaster")
-    if not console_master then
-        return false
-    end
-
-    local window = console_master:FindFirstChild("DevConsoleWindow")
-    if not window then
-        return false
-    end
-
-    local dev_console_ui = window:FindFirstChild("DevConsoleUI")
-    if not dev_console_ui then
-        return false
-    end
-
-    local _ClientLog = (dev_console_ui:FindFirstChild("MainView") and dev_console_ui.MainView:FindFirstChild("ClientLog"))
-    return _ClientLog ~= nil, _ClientLog
+    return _find_first_child(CoreGui, { "DevConsoleMaster", "DevConsoleWindow", "DevConsoleUI", "MainView", "ClientLog" })
 end
 
 --// module functions \\--
-function module.custom_print(...)
+function library.custom_print(...)
     local custom_print = {
         message = "",
         image = "",
@@ -102,42 +99,62 @@ function module.custom_print(...)
     end
 
     --// for main loop \\--
-    local logData;
+    local logData = nil;
+    local logName = nil;
+    local logCooldown = false;
 
 	--// insert into prints table, also cut old prints if over max lines \\--
-	while #module.custom_prints > MAX_LINES do table.remove(module.custom_prints, 1); end
-    table.insert(module.custom_prints, custom_print)
+	while #library.custom_prints > MAX_LINES do table.remove(library.custom_prints, 1); end
+    table.insert(library.custom_prints, custom_print)
 
     custom_print.update = function(ClientLogChildren)
         if not ClientLog then return end
+        
+        --// Get the instance \\--
+        if not logName then
+            if logCooldown then return end
+            logCooldown = true;
 
-        if logData and (logData.inst and logData.inst.Parent and logData.inst.Parent.Name == ClientLog.Name) then
-            if logData.msg then
-                -- Update the message
-                logData.msg.Text = custom_print.timestamp .. " -- " .. custom_print.message
-                logData.msg.TextColor3 = custom_print.color
-                logData.msg.TextWrapped = true
+            for _, logFrame in ClientLogChildren do
+				local msgInst = logFrame:FindFirstChild("msg")
+                if not (msgInst and string.match(msgInst.Text, tostring(custom_print.UMID) .. "$")) then continue end
+
+                logName = logFrame.Name;
+                break;
             end
 
-            if logData.img then
-                logData.img.Image = custom_print.image
-                logData.img.ImageColor3 = custom_print.color
-            end
-        else
-			logData = nil;
-            for _, newlog in pairs(ClientLogChildren) do
-				local msgInst, imgInst = newlog:FindFirstChild("msg"), newlog:FindFirstChild("image")
-                if not (msgInst and imgInst) then continue end
-                if tostring(msgInst.Text):split(" -- ")[2] ~= tostring(custom_print.UMID) then continue end
+            task.delay(math.random() / 5, function() logCooldown = false; end)
+            return;
+        end
 
-                logData = {
-                    inst = newlog;
-                    msg = msgInst;
-                    img = imgInst;
-                };
+        if not (logData and logData.frame and logData.frame.Parent) then
+            logData = nil;
 
-                break
-            end
+            local logFrame = ClientLog:FindFirstChild(logName);
+            if not logFrame then return end
+
+            local msgInst, imgInst = logFrame:FindFirstChild("msg"), logFrame:FindFirstChild("image");
+            if not (msgInst and imgInst) then return end
+
+            logData = {
+                frame = logFrame;
+                msg = msgInst;
+                img = imgInst;
+            };
+            return
+        end
+
+        --// Update the message \\--
+        if logData.msg then
+            logData.msg.Text = custom_print.timestamp .. " -- " .. custom_print.message
+            logData.msg.TextColor3 = custom_print.color
+            logData.msg.TextWrapped = true
+        end
+
+        --// Update the image \\--
+        if logData.img then
+            logData.img.Image = custom_print.image
+            logData.img.ImageColor3 = custom_print.color
         end
     end
 
@@ -194,9 +211,9 @@ function module.custom_print(...)
     end
 
     log_module.cleanup = function()
-        for i, print_data in pairs(module.custom_prints) do
+        for i, print_data in pairs(library.custom_prints) do
             if print_data.UMID == custom_print.UMID then
-                table.remove(module.custom_prints, i)
+                table.remove(library.custom_prints, i)
                 break
             end
         end
@@ -209,7 +226,7 @@ function module.custom_print(...)
     return log_module
 end
 
-function module.custom_console_progressbar(params)
+function library.custom_console_progressbar(params)
     if typeof(params) == "string" then
         params = {msg = params}
     end
@@ -223,7 +240,7 @@ function module.custom_console_progressbar(params)
     local progressbar_char = "█"
     local progressbar_empty = "░"
 
-    local message = module.custom_print(msg, img, clr)
+    local message = library.custom_print(msg, img, clr)
     local progress = 0
 
     --// print module \\--
@@ -244,7 +261,7 @@ function module.custom_console_progressbar(params)
 
         local normalized_progress = math.floor(progress / progressbar_length * 100)
 
-        for i=1, 10 do
+        for i = 1, 10 do
             if i <= progress / progressbar_length * 10 then
                 progressbar_string = progressbar_string .. progressbar_char
             else
@@ -268,22 +285,24 @@ function module.custom_console_progressbar(params)
 end
 
 --// update loop \\--
-module.render_stepped_conn = RunService.RenderStepped:Connect(function()
-    if #module.custom_prints == 0 then return end
+library.render_stepped_conn = RunService.RenderStepped:Connect(function()
+    if #library.custom_prints == 0 then return end
 
-    -- update client log --
-    local vis, log = _internal_get_console()
-    if not vis then return end
-	if not log then return end
-    ClientLog = log;
+    --// update client log \\--
+    if not (ClientLog and ClientLog.Parent) then
+        local exists, newClientLog = _internal_get_console()
+        if not (exists and newClientLog) then return end
 
-    -- prints update --
-	local clientLogChildren = ClientLog:GetChildren()
-    for _, print_data in next, module.custom_prints do
-        print_data.update(clientLogChildren)
+        ClientLog = newClientLog;
+    end
+
+    --// prints update \\--
+	local ClientLogChildren = ClientLog:GetChildren()
+    for _, print_data in next, library.custom_prints do
+        print_data.update(ClientLogChildren)
     end
 end)
 
--- return the module --
-global_env.console_utils = module
-return module
+--// return the module \\--
+global_env.console_utils = library
+return library
