@@ -12,7 +12,6 @@
 local global_env = (getgenv and getgenv()) or shared or _G or {}
 if global_env["console_utils"] then return global_env.console_utils end
 
-
 --// services \\--
 local cloneref = (cloneref or clonereference or function(instance: any) return instance end)
 local RunService = cloneref(game:GetService("RunService"))
@@ -135,6 +134,8 @@ function library.custom_print(...)
 
             local msgInst, imgInst = logFrame:FindFirstChild("msg"), logFrame:FindFirstChild("image");
             if not (msgInst and imgInst) then return end
+
+            if not string.match(msgInst.Text, tostring(custom_print.UMID) .. "$") then return end
 
             logData = {
                 frame = logFrame;
